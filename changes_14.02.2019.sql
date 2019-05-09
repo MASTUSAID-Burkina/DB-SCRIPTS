@@ -104,3 +104,39 @@ ALTER TABLE public.la_ext_permission ADD CONSTRAINT fk_applicant FOREIGN KEY (ap
 ALTER TABLE public.la_ext_permission ADD CONSTRAINT fk_owner FOREIGN KEY (ownerid)
       REFERENCES public.la_party (partyid) MATCH SIMPLE
       ON UPDATE NO ACTION ON DELETE NO ACTION;
+
+CREATE OR REPLACE FUNCTION public.updatearea()
+  RETURNS trigger AS
+$BODY$
+BEGIN
+
+IF (select st_equals(new.geometry,old.geometry) FROM la_spatialunit_land where landid=new.landid) ='False' Then
+update la_spatialunit_land set Area=ST_Area(geometry) Where LandID=new.LandID;
+
+  END IF;
+
+RETURN NEW;
+END;
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100;
+ALTER FUNCTION public.updatearea()
+  OWNER TO postgres;
+
+CREATE OR REPLACE FUNCTION public.update_area()
+  RETURNS trigger AS
+$BODY$BEGIN
+
+ IF Exists (select landid from la_spatialunit_land Where oldLandID=new.OLDLandID) THEN
+update la_spatialunit_land set Area=  ST_Area(geometry)
+ Where oldLandID=new.OLDLandID and landid in(select landid from la_spatialunit_land Where oldLandID=new.OLDLandID);
+   
+END IF;
+
+RETURN NEW;
+END;
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100;
+ALTER FUNCTION public.update_area()
+  OWNER TO postgres;
